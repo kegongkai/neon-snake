@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>霓虹贪吃蛇 · Neon Snake</title>
+<style>
+body{margin:0;font-family:system-ui,-apple-system,sans-serif;background:#fdf9fb;color:#0f172a;display:flex;flex-direction:column;align-items:center;padding:24px 16px;box-sizing:border-box}
+h1{margin:0 0 4px;font-size:32px;font-weight:800;background:linear-gradient(100deg,#bd3193,#0891b2);-webkit-background-clip:text;background-clip:text;color:transparent;letter-spacing:-.02em}
+p.sub{color:#64748b;margin:0 0 16px;font-size:14px}
+.panel{display:flex;gap:12px;margin-bottom:14px;flex-wrap:wrap;justify-content:center}
+.stat{background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:10px;padding:8px 18px;text-align:center;min-width:80px}
+.stat .label{font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:#64748b}
+.stat .val{font-size:22px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.2}
+#score .val{color:#bd3193}#best .val{color:#0891b2}
+.wrap{position:relative;border-radius:14px;overflow:hidden;border:1px solid #bd3193;box-shadow:0 0 28px rgba(189,49,147,.3)}
+canvas{display:block;background:#0a0a1a;max-width:100%;height:auto}
+#overlay{position:absolute;inset:0;background:rgba(10,10,26,.85);display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;gap:10px;padding:20px;text-align:center}
+#overlay h2{margin:0;font-size:24px;font-weight:800}
+#overlay p{margin:0;color:rgba(255,255,255,.7);font-size:14px;max-width:260px;line-height:1.6}
+button{padding:12px 32px;border-radius:10px;border:none;background:#bd3193;color:#fff;font-size:16px;font-weight:700;cursor:pointer;box-shadow:0 4px 16px rgba(189,49,147,.4);transition:transform .1s}
+button:active{transform:scale(.95)}
+button.sec{background:#fff;color:#0f172a;border:1px solid rgba(15,23,42,.15);box-shadow:none;font-size:14px;padding:9px 20px}
+.btns{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;justify-content:center}
+.tip{margin-top:16px;font-size:11px;color:#64748b}
+</style>
+</head>
+<body>
+<h1>霓虹贪吃蛇</h1>
+<p class="sub">方向键 / WASD 控制 · 空格暂停 · 吃到光点得分</p>
+<div class="panel">
+<div class="stat" id="score"><div class="label">分数</div><div class="val">0</div></div>
+<div class="stat" id="best"><div class="label">最高分</div><div class="val">0</div></div>
+<div class="stat" id="len"><div class="label">长度</div><div class="val">3</div></div>
+</div>
+<div class="wrap">
+<canvas id="c" width="400" height="400"></canvas>
+<div id="overlay">
+<h2 id="ot">准备好了吗？</h2>
+<p id="os">用方向键控制小蛇，吃到光点变长，撞墙或撞到自己即结束</p>
+<button id="startBtn">开始游戏</button>
+</div>
+</div>
+<div class="btns">
+<button class="sec" id="pauseBtn">暂停</button>
+<button class="sec" id="resetBtn">重置</button>
+</div>
+<p class="tip">最高分自动保存在本机浏览器 · 单文件静态站 · GitHub Pages 托管</p>
+<script>
+var cv=document.getElementById('c'),x=cv.getContext('2d'),G=20,C=20,S=400;
+var snake,dir,nd,food,score,best=parseInt(localStorage.getItem('snakeBest')||'0'),spd,timer,run,pause;
+var sc=document.querySelector('#score .val'),bc=document.querySelector('#best .val'),lc=document.querySelector('#len .val');
+var ov=document.getElementById('overlay'),ot=document.getElementById('ot'),os=document.getElementById('os'),sb=document.getElementById('startBtn'),pb=document.getElementById('pauseBtn');
+bc.textContent=best;
+function reset(){snake=[{x:10,y:10},{x:9,y:10},{x:8,y:10}];dir={x:1,y:0};nd={x:1,y:0};score=0;spd=130;placeFood();upd();draw();}
+function placeFood(){while(1){var fx=Math.floor(Math.random()*G),fy=Math.floor(Math.random()*G),h=0;for(var i=0;i<snake.length;i++)if(snake[i].x===fx&&snake[i].y===fy){h=1;break;}if(!h){food={x:fx,y:fy};break;}}}
+function upd(){sc.textContent=score;lc.textContent=snake.length;if(score>best){best=score;localStorage.setItem('snakeBest',best);bc.textContent=best;}}
+function rr(a,b,c,d,r){x.beginPath();x.moveTo(a+r,b);x.arcTo(a+c,b,a+c,b+d,r);x.arcTo(a+c,b+d,a,b+d,r);x.arcTo(a,b+d,a,b,r);x.arcTo(a,b,a+c,b,r);x.closePath();}
+function draw(){x.fillStyle='#0a0a1a';x.fillRect(0,0,S,S);x.strokeStyle='rgba(255,255,255,.04)';x.lineWidth=1;for(var i=1;i<G;i++){x.beginPath();x.moveTo(i*C,0);x.lineTo(i*C,S);x.stroke();x.beginPath();x.moveTo(0,i*C);x.lineTo(S,i*C);x.stroke();}
+x.save();x.shadowColor='#22d3ee';x.shadowBlur=14;x.fillStyle='#67e8f9';x.beginPath();x.arc(food.x*C+C/2,food.y*C+C/2,C/2-3,0,7);x.fill();x.restore();
+for(var j=snake.length-1;j>=0;j--){var s=snake[j],t=j/Math.max(snake.length-1,1),r=Math.round(189+(8-189)*t),g=Math.round(49+(145-49)*t),b=Math.round(147+(178-147)*t);x.fillStyle='rgb('+r+','+g+','+b+')';if(j===0){x.save();x.shadowColor='#bd3193';x.shadowBlur=12;rr(s.x*C+1,s.y*C+1,C-2,C-2,5);x.fill();x.restore();}else{rr(s.x*C+2,s.y*C+2,C-4,C-4,4);x.fill();}}}
+function step(){dir=nd;var h={x:snake[0].x+dir.x,y:snake[0].y+dir.y};if(h.x<0||h.x>=G||h.y<0||h.y>=G){over();return;}for(var i=0;i<snake.length;i++)if(snake[i].x===h.x&&snake[i].y===h.y){over();return;}snake.unshift(h);if(h.x===food.x&&h.y===food.y){score+=10;placeFood();if(spd>55){spd=Math.round(spd*.97);clearInterval(timer);timer=setInterval(step,spd);}}else snake.pop();upd();draw();}
+function start(){reset();run=1;pause=0;ov.style.display='none';pb.textContent='暂停';clearInterval(timer);timer=setInterval(step,spd);}
+function over(){run=0;clearInterval(timer);ot.textContent='游戏结束';os.innerHTML='本局得分 <b style="color:#f0abfc">'+score+'</b> · 最高分 <b style="color:#67e8f9">'+best+'</b><br>长度达到 '+snake.length;sb.textContent='再来一局';ov.style.display='flex';}
+function tog(){if(!run)return;if(pause){pause=0;timer=setInterval(step,spd);pb.textContent='暂停';ov.style.display='none';}else{pause=1;clearInterval(timer);pb.textContent='继续';ot.textContent='已暂停';os.textContent='点击继续按钮恢复游戏';sb.textContent='继续游戏';ov.style.display='flex';}}
+function sd(d){var m={up:{x:0,y:-1},down:{x:0,y:1},left:{x:-1,y:0},right:{x:1,y:0}}[d];if(!m)return;if(m.x===-dir.x&&m.y===-dir.y)return;nd=m;}
+sb.onclick=function(){if(pause)tog();else start();};
+pb.onclick=tog;
+document.getElementById('resetBtn').onclick=function(){clearInterval(timer);run=0;pause=0;reset();ot.textContent='准备好了吗？';os.textContent='用方向键控制小蛇，吃到光点变长，撞墙或撞到自己即结束';sb.textContent='开始游戏';pb.textContent='暂停';ov.style.display='flex';};
+document.addEventListener('keydown',function(e){var k=e.key.toLowerCase(),m={arrowup:'up',w:'up',arrowdown:'down',s:'down',arrowleft:'left',a:'left',arrowright:'right',d:'right'};if(m[k]){e.preventDefault();if(run&&!pause)sd(m[k]);}if(k===' '){e.preventDefault();if(!run)start();else tog();}});
+reset();
+</script>
+</body>
+</html>
